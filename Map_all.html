@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Delhi Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    />
+</head>
+<body>
+    <div id="map" style="height: 500px;"></div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    ></script>
+    <script>
+        var map = L.map('map').setView([28.6139, 77.2090], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        var marker = L.marker([28.6139, 77.2090]).addTo(map);
+
+        // Function to update the marker's popup content with real-time data
+        function updateMarkerPopup(latitude, longitude) {
+            var openweather_api_key = "2109fcbf6bedfee66211bf51131ee24f";
+
+            // Make API requests to OpenWeatherMap for air quality and weather data
+            Promise.all([
+                fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=${latitude}&lon=${longitude}&appid=${openweather_api_key}`).then(response => response.json()),
+                fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${openweather_api_key}&units=metric`).then(response => response.json())
+            ])
+            .then(([airQualityData, weatherData]) => {
+                // Extract air quality parameters
+                var airQuality = airQualityData.list[0].main.aqi;
+                var pollutants = airQualityData.list[0].components;
+
+                // Extract meteorological weather data
+                var temperature = weatherData.main.temp;
+                var humidity = weatherData.main.humidity;
+                var pressure = weatherData.main.pressure;
+
+                // Construct the popup content with all the data
+                var popupContent = `Air Quality: ${airQuality}<br>
+                                    PM2.5: ${pollutants.pm2_5} µg/m³<br>
+                                    PM10: ${pollutants.pm10} µg/m³<br>
+                                    Temperature: ${temperature}°C<br>
+                                    Humidity: ${humidity}%<br>
+                                    Pressure: ${pressure} hPa`;
+
+                marker.setLatLng([latitude, longitude]);
+                marker.setPopupContent(popupContent);
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+            });
+        }
+
+        // Initial popup content
+        marker.bindPopup("Click to fetch data");
+
+        // Event handler for clicking the map
+        map.on('click', function (e) {
+            var clickedLatitude = e.latlng.lat;
+            var clickedLongitude = e.latlng.lng;
+            updateMarkerPopup(clickedLatitude, clickedLongitude);
+        });
+
+        // Fetch data for the initial marker position
+        updateMarkerPopup(28.6139, 77.2090);
+    </script>
+</body>
+</html>
